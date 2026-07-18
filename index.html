@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Word Puzzle Kingdom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root{
+    --ink:#152238; --ink-soft:#22345A; --parchment:#FBF3E1; --parchment-line:#E9DCB8;
+    --cream:#F7EFDC; --gold:#F2B705; --gold-dark:#C98F02; --wrong:#D9482F; --right:#3E8E4F;
+    --ch1-main:#178C82; --ch1-dark:#0E6864; --ch1-soft:#DCF2EE;
+    --ch2-main:#7C5CBF; --ch2-dark:#5B3F94; --ch2-soft:#EAE2F7;
+    --ch3-main:#3E8E4F; --ch3-dark:#2A6B3A; --ch3-soft:#E1F1E3;
+  }
+  html,body{ height:100%; }
+  body{
+    margin:0; font-family:'Nunito',sans-serif;
+    background:#0c1220;
+    display:flex; align-items:center; justify-content:center;
+    padding:16px;
+  }
+  .f-display{ font-family:'Baloo 2',sans-serif; }
+  .f-body{ font-family:'Nunito',sans-serif; }
+  #stage{
+    width:100%; max-width:820px; min-height:600px;
+    background: radial-gradient(circle at 50% 0%, var(--ink-soft) 0%, var(--ink) 65%);
+    border-radius:1rem; overflow:hidden; position:relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  @keyframes wpk-fall { to { transform: translateY(420px) rotate(360deg); opacity: 0; } }
+  .confetti-piece{ position:absolute; top:-10%; border-radius:2px; opacity:0.9; }
+  .fade-in{ animation: fadein .25s ease; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  button{ cursor:pointer; font-family:inherit; }
+  button:disabled{ cursor:default; }
+  .opt-btn{ transition: background-color .15s, border-color .15s; }
+  .scrollbar-thin::-webkit-scrollbar{ width:6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb{ background:var(--parchment-line); border-radius:4px; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="root"></div></div>
+
+<script>
+/* ============================== DESIGN TOKENS ============================== */
+const INK = "#152238", INK_SOFT = "#22345A", PARCHMENT = "#FBF3E1", PARCHMENT_LINE = "#E9DCB8";
+const CREAM_TEXT = "#F7EFDC", GOLD = "#F2B705", GOLD_DARK = "#C98F02", WRONG = "#D9482F", RIGHT = "#3E8E4F";
+const CH_COLORS = {
+  1: { main: "#178C82", dark: "#0E6864", soft: "#DCF2EE" },
+  2: { main: "#7C5CBF", dark: "#5B3F94", soft: "#EAE2F7" },
+  3: { main: "#3E8E4F", dark: "#2A6B3A", soft: "#E1F1E3" },
+};
+
+/* ============================== GLOSSARY ============================== */
+const GLOSSARY = [
+  { term: "Noun", def: "A word that names a person, animal, place or thing." },
+  { term: "Abstract noun", def: "A noun for a feeling, idea or quality you can't touch — like honesty or joy." },
+  { term: "Concrete noun", def: "A noun for something you can see, hear, touch, taste or smell — like a mango." },
+  { term: "Possessive noun", def: "A noun that shows who owns something, usually made with an apostrophe (') — like Rohan's ball." },
+  { term: "Apostrophe ( ' )", def: "The punctuation mark used to show possession, like in Rohan's or the dogs'." },
+  { term: "Singular", def: "Means just one — like one cat." },
+  { term: "Plural", def: "Means more than one — like many cats." },
+  { term: "Irregular plural", def: "A plural that does NOT just add -s or -es — like children, sheep, or teeth." },
+];
+
+/* ============================== CONTENT DATA ============================== */
+const CHAPTERS = [
+  {
+    id: 1,
+    title: "Isle of Feelings",
+    subtitle: "Abstract & Concrete Nouns",
+    emoji: "🏝️",
+    learn: [
+      { h: "What is a Noun?", b: "A noun names a person, animal, place or thing. In this chapter we meet two special kinds of noun — ones you can sense with your body, and ones you can only feel inside your heart." },
+      { h: "Concrete Nouns 👀", b: "Concrete nouns name things you can see, hear, touch, taste or smell. If you can point at it or hold it, it's concrete!", examples: ["airport", "mango", "hat", "bottle", "board"], check: { q: "Which word below is a CONCRETE noun?", opts: ["joy", "hat", "peace", "truth"], a: 1, note: "A hat is something you can wear and touch — concrete!" } },
+      { h: "Abstract Nouns 💭", b: "Abstract nouns name a feeling, an idea, or a quality. You cannot touch them, taste them or hold them in your hand — but you can still feel them!", examples: ["confusion", "honesty", "courage", "love", "justice", "peace"], check: { q: "Which word below is an ABSTRACT noun?", opts: ["bottle", "courage", "hat", "board"], a: 1, note: "Courage is a feeling of bravery inside you — abstract!" } },
+      { h: "Try the Trick! ✨", b: "Read this: 'My brother finds great happiness in playing with our dog.' Ask — can I touch 'happiness'? No! It's a feeling, so it's abstract. Can I touch 'dog'? Yes! So dog is concrete.", check: { q: "In that same sentence, which word is the ABSTRACT noun?", opts: ["brother", "happiness", "dog", "playing"], a: 1, note: "Happiness is the feeling — that makes it abstract." } },
+      { h: "Remember This Rhyme 🎵", b: "Abstract feels, but does not show. Concrete you can touch and know! Say it out loud a few times — it will help you remember forever." },
+    ],
+    quiz: [
+      { q: "Which word is an ABSTRACT noun?", opts: ["sunrise", "happiness", "dog", "toys"], a: 1, hint: "Abstract nouns are feelings, not things you can touch.", ex: "Happiness is a feeling — you can't touch it!" },
+      { q: "Which word is a CONCRETE noun?", opts: ["patience", "hope", "puppy", "love"], a: 2, hint: "Concrete nouns are things you can see or touch.", ex: "A puppy is something you can see and touch." },
+      { q: "The ____ from the sun dried the clothes.", opts: ["heat", "advice", "bravery", "talent"], a: 0, hint: "Which word means the warmth that dries things?", ex: "Heat is what dried the clothes." },
+      { q: "Amal was filled with ____ to climb the steep hill.", opts: ["heat", "talent", "determination", "bravery"], a: 2, hint: "This word means a strong will to keep trying something hard.", ex: "Determination means a strong will to do something." },
+      { q: "My friend had a natural ____ for storytelling.", opts: ["bravery", "talent", "advice", "heat"], a: 1, hint: "This word means a natural skill someone is born with.", ex: "A natural skill for something is called talent." },
+      { q: "The soldier was awarded a medal for his ____.", opts: ["talent", "heat", "advice", "bravery"], a: 3, hint: "This word means courage shown in the face of danger.", ex: "Bravery means courage in danger." },
+      { q: "Unscramble: O-U-R-A-C-E-G", opts: ["courage", "encourage", "courageous", "curage"], a: 0, hint: "It means being brave.", ex: "ouraceg → courage, meaning bravery." },
+      { q: "Unscramble: N-K-E-I-S-D-S-N", opts: ["kindly", "kind", "kindness", "unkind"], a: 2, hint: "It means being caring and gentle to others.", ex: "nkeisdsn → kindness, a lovely abstract noun!" },
+      { q: "Which word is abstract in: 'The doctor felt compassion for his patients.'", opts: ["doctor", "compassion", "patients", "felt"], a: 1, hint: "Compassion is a feeling of caring for someone.", ex: "Compassion is a feeling of caring for others." },
+      { q: "Which of these is NOT an abstract noun?", opts: ["health", "education", "hospital", "development"], a: 2, hint: "Three of these are feelings or ideas — one is a real building!", ex: "A hospital is a building you can see and touch — concrete!" },
+    ],
+  },
+  {
+    id: 2,
+    title: "Castle of Belonging",
+    subtitle: "Possessive Nouns",
+    emoji: "🏰",
+    learn: [
+      { h: "What is Possessive?", b: "A possessive noun shows who owns something. We use a small mark called an apostrophe (') to show ownership." },
+      { h: "Rule 1 — Singular Noun", b: "For one person, animal or thing, add 's at the end.", examples: ["Rohan's puppy", "the woman's bag", "India's exports"], check: { q: "Choose correct: The ___ pencil is sharp. (Mona)", opts: ["Monas", "Mona's", "Monas'", "Mona"], a: 1, note: "Mona is one singular person — just add 's." } },
+      { h: "Rule 2 — Plural NOT ending in -s", b: "If a plural word does not already end in -s (like children or men), add 's.", examples: ["the children's friends", "the men's boots"] },
+      { h: "Rule 3 — Plural ending in -s", b: "If a plural word already ends in -s (like dogs), add only an apostrophe (') — no extra s!", examples: ["the dogs' names", "the girls' bags"], check: { q: "A plural word ending in -s gets which ending?", opts: ["'s", "'", "s'", "nothing"], a: 1, note: "Just the apostrophe — the dogs' names." } },
+      { h: "Rule 4 — Family Surnames", b: "For a whole family's surname, add -s' at the end.", examples: ["the Joshis' kennel", "the Sharmas' garden"], check: { q: "The whole Sharma family owns a garden. It is the ___ garden.", opts: ["Sharma's", "Sharmas'", "Sharmas", "Sharma"], a: 1, note: "Family surname → add -s' → the Sharmas' garden." } },
+      { h: "Remember! ⚠️", b: "We use 's mainly for people, animals and countries. For things (non-living objects), we usually say 'of the ___' instead.", examples: ["pages of the book", "arms of the chair"], check: { q: "Which is the better way to describe a chair's arms?", opts: ["the chair's arms", "arms of the chair"], a: 1, note: "For things, we usually say 'of the ___'." } },
+    ],
+    quiz: [
+      { q: "Choose the correct possessive: The ___ feathers were white.", opts: ["goose's", "gooses'", "goose", "gooses"], a: 0, hint: "Goose is singular — just add 's.", ex: "Singular noun goose → add 's." },
+      { q: "The ___ ears were wiggly.", opts: ["rabbits", "rabbit", "rabbit's", "rabbits'"], a: 2, hint: "Rabbit is singular — just add 's.", ex: "Singular noun rabbit → add 's." },
+      { q: "___ stories are my favourite. (Nishtha)", opts: ["Nishthas'", "Nishtha", "Nishthas", "Nishtha's"], a: 3, hint: "Nishtha is one person's name — a singular noun.", ex: "A name is singular → add 's." },
+      { q: "Our ___ car is brown. (teacher)", opts: ["teachers", "teacher's", "teachers'", "teacher"], a: 1, hint: "Teacher here means just one teacher.", ex: "Singular noun teacher → add 's." },
+      { q: "Rahul has a new bicycle. ___ bicycle is red.", opts: ["Rahuls", "Rahul's", "Rahuls'", "Rahul"], a: 1, hint: "Rahul is a singular name.", ex: "Rahul's bicycle = the bicycle belonging to Rahul." },
+      { q: "Which shows the possessive correctly for a PLURAL word ending in -s?", opts: ["the dog's names", "the dogs's names", "the dogs' names", "the dogies names"], a: 2, hint: "Dogs already ends in -s — add just an apostrophe.", ex: "Plural ending in -s → add only an apostrophe." },
+      { q: "Which shows the possessive correctly for a family surname?", opts: ["the Joshi's kennel", "the Joshis kennel", "the Joshis' kennel", "the Joshies kennel"], a: 2, hint: "Family surnames add -s' at the very end.", ex: "Family surnames take -s' — the Joshis' kennel." },
+      { q: "Did you borrow ___ bat? (Arun)", opts: ["Arun's", "Aruns", "Arun", "Aruns'"], a: 0, hint: "Arun is a singular name — add 's.", ex: "Singular name Arun → add 's." },
+      { q: "Please put ___ toy cars in the box. (Dipanshu)", opts: ["Dipanshus", "Dipanshu", "Dipanshu's", "Dipanshus'"], a: 2, hint: "Dipanshu is a singular name — add 's.", ex: "Dipanshu's toy cars = the toy cars belonging to Dipanshu." },
+      { q: "Which is correct for a NON-LIVING thing, like a book?", opts: ["the book's pages", "pages of the book", "the books pages", "the book' pages"], a: 1, hint: "Books are things, not people or animals.", ex: "For things (not people/animals), we usually say 'of the ___'." },
+    ],
+  },
+  {
+    id: 3,
+    title: "Forest of Many",
+    subtitle: "Regular & Irregular Plurals",
+    emoji: "🌳",
+    learn: [
+      { h: "Regular Plurals", b: "Most nouns simply add -s or -es to become plural. This is the most common pattern — easy!", examples: ["girl → girls", "branch → branches"], check: { q: "What is the plural of 'cat'?", opts: ["cates", "cats", "cat's", "catss"], a: 1, note: "Just add -s: cat → cats." } },
+      { h: "Change Spelling Completely", b: "Some special nouns change their spelling entirely to become plural! These need to be memorised.", examples: ["man → men", "child → children", "tooth → teeth"], check: { q: "What is the plural of 'goose'?", opts: ["gooses", "geese", "goosies", "goose's"], a: 1, note: "goose → geese, the -oo- changes to -ee-." } },
+      { h: "No Change At All", b: "Some nouns stay exactly the same whether singular or plural — tricky but fun to remember!", examples: ["sheep → sheep", "deer → deer", "aircraft → aircraft"], check: { q: "What is the plural of 'aircraft'?", opts: ["aircrafts", "aircraft", "aircraftes", "aircraften"], a: 1, note: "Aircraft doesn't change at all!" } },
+      { h: "Words Ending in -y", b: "Drop the -y and add -ies. But if a vowel (a, e, i, o, u) comes right before the -y, just add -s.", examples: ["cherry → cherries", "key → keys", "monkey → monkeys"], check: { q: "What is the plural of 'baby'?", opts: ["babys", "babies", "baby's", "babes"], a: 1, note: "Drop -y, add -ies: baby → babies." } },
+      { h: "Words Ending in -f / -fe", b: "Drop the -f or -fe and add -ves.", examples: ["leaf → leaves", "life → lives", "wolf → wolves"], check: { q: "What is the plural of 'knife'?", opts: ["knifes", "knives", "knifs", "knife's"], a: 1, note: "Drop -fe, add -ves: knife → knives." } },
+    ],
+    quiz: [
+      { q: "What is the plural of 'woman'?", opts: ["womans", "women", "womens", "woman's"], a: 1, hint: "This is a spelling-change irregular plural.", ex: "woman → women (spelling changes completely)." },
+      { q: "What is the plural of 'tooth'?", opts: ["tooths", "teeth", "toothes", "teeths"], a: 1, hint: "The -oo- changes to -ee- in this word.", ex: "-oo- changes to -ee-: tooth → teeth." },
+      { q: "What is the plural of 'deer'?", opts: ["deers", "deer", "deeres", "deeries"], a: 1, hint: "This word doesn't change in the plural at all.", ex: "Deer does not change in its plural form." },
+      { q: "What is the plural of 'wolf'?", opts: ["wolfs", "wolves", "wolfes", "wolfves"], a: 1, hint: "Words ending in -f often change to -ves.", ex: "Drop -f, add -ves: wolf → wolves." },
+      { q: "What is the plural of 'child'?", opts: ["childs", "childes", "children", "childrens"], a: 2, hint: "This is one of the most famous irregular plurals.", ex: "child → children, a special irregular plural." },
+      { q: "What is the plural of 'sheep'?", opts: ["sheeps", "sheep", "sheepes", "sheepies"], a: 1, hint: "This animal's plural looks exactly like its singular.", ex: "Sheep stays the same in singular and plural!" },
+      { q: "What is the plural of 'foot'?", opts: ["foots", "feet", "footes", "feets"], a: 1, hint: "The -oo- changes to -ee- here too.", ex: "-oo- changes to -ee-: foot → feet." },
+      { q: "Which of these is an IRREGULAR plural?", opts: ["tomatoes", "sandwiches", "sheep", "pencils"], a: 2, hint: "Look for the one that doesn't just add -s or -es.", ex: "Sheep doesn't add -s or -es, so it's irregular." },
+      { q: "What is the plural of 'mouse'?", opts: ["mouses", "mices", "mouse's", "mice"], a: 3, hint: "This word's spelling changes completely, like 'goose' to 'geese'.", ex: "mouse → mice, spelling changes completely." },
+      { q: "What is the SINGULAR of 'oxen'?", opts: ["ox", "oxe", "oxi", "oxes"], a: 0, hint: "Think of the plural 'oxen' and work backwards.", ex: "ox → oxen is one of the special irregular plurals." },
+    ],
+  },
+];
+
+const TOTAL_MAX_STARS = CHAPTERS.length * 3;
+
+/* ============================== STORAGE HELPERS ============================== */
+const STORAGE_KEY = "wpk-progress-v2";
+const defaultProgress = { 1: { best: 0, stars: 0 }, 2: { best: 0, stars: 0 }, 3: { best: 0, stars: 0 } };
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* nothing saved yet */ }
+  return JSON.parse(JSON.stringify(defaultProgress));
+}
+function saveProgress(progress) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); } catch (e) { /* best effort */ }
+}
+
+function starsForScore(pct) {
+  if (pct >= 90) return 3;
+  if (pct >= 70) return 2;
+  if (pct >= 40) return 1;
+  return 0;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+/* ============================== GLOBAL STATE ============================== */
+const state = {
+  progress: loadProgress(),
+  screen: "home",          // 'home' | 'chapter'
+  activeChapterId: null,
+  showGlossary: false,
+  showCertificate: false,
+  tab: "learn",             // within chapter: 'learn' | 'practice'
+  learnIdx: 0,
+  checkSel: null,
+  quiz: {
+    qIdx: 0, selected: null, answered: false, showHint: false,
+    score: 0, streak: 0, mistakes: [], done: false,
+  },
+};
+
+function resetQuizState() {
+  state.quiz = { qIdx: 0, selected: null, answered: false, showHint: false, score: 0, streak: 0, mistakes: [], done: false };
+}
+
+/* ============================== ICON HELPER ============================== */
+function icon(name, size, extraAttrs) {
+  return `<i data-lucide="${name}" style="width:${size}px;height:${size}px;${extraAttrs||''}"></i>`;
+}
+
+/* ============================== PIP MASCOT ============================== */
+function pipSvg(mood, size) {
+  mood = mood || "happy";
+  size = size || 56;
+  const mouthPaths = {
+    happy: "M -9 6 Q 0 14 9 6",
+    excited: "M -9 4 Q 0 18 9 4 Q 0 12 -9 4",
+    thinking: "M -7 8 Q 0 8 7 8",
+    proud: "M -10 4 Q 0 16 10 4",
+    oops: "M -8 10 Q 0 2 8 10",
+  };
+  const eyeShiftY = mood === "thinking" ? -2 : 0;
+  const gradId = "pipGrad" + Math.random().toString(36).slice(2,8);
+  return `
+  <svg width="${size}" height="${size}" viewBox="-30 -30 60 60">
+    <defs>
+      <linearGradient id="${gradId}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${GOLD}" />
+        <stop offset="100%" stop-color="${GOLD_DARK}" />
+      </linearGradient>
+    </defs>
+    <rect x="-26" y="-26" width="52" height="52" rx="16" fill="url(#${gradId})" stroke="${GOLD_DARK}" stroke-width="2.5" />
+    <circle cx="26" cy="0" r="9" fill="${GOLD}" stroke="${GOLD_DARK}" stroke-width="2.5" />
+    <circle cx="-10" cy="${-8 + eyeShiftY}" r="3.2" fill="${INK}" />
+    <circle cx="10" cy="${-8 + eyeShiftY}" r="3.2" fill="${INK}" />
+    <path d="${mouthPaths[mood] || mouthPaths.happy}" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round" />
+  </svg>`;
+}
+
+function speechBubble(mood, html, align) {
+  const justify = align === "center" ? "justify-center" : "";
+  return `
+  <div class="flex items-end gap-2 ${justify}">
+    <div class="flex-shrink-0">${pipSvg(mood, 46)}</div>
+    <div class="rounded-2xl rounded-bl-sm px-3.5 py-2 text-[13px] leading-snug max-w-xs f-body"
+      style="background:rgba(255,255,255,0.08); color:${CREAM_TEXT}; border:1px solid rgba(255,255,255,0.12);">
+      ${html}
+    </div>
+  </div>`;
+}
+
+function chip(text, color) {
+  return `<span class="inline-block px-2.5 py-0.5 rounded-full text-[12px] font-bold mr-1.5 mb-1.5 f-body"
+    style="background:${color}22; color:${color}; border:1.5px solid ${color}55;">${esc(text)}</span>`;
+}
+
+/* ============================== CONFETTI ============================== */
+function confettiHtml() {
+  const colors = [GOLD, CH_COLORS[1].main, CH_COLORS[2].main, CH_COLORS[3].main, "#FF6F61"];
+  let pieces = "";
+  for (let i = 0; i < 28; i++) {
+    const left = Math.random() * 100;
+    const delay = (Math.random() * 0.6).toFixed(2);
+    const dur = (1.6 + Math.random() * 1.2).toFixed(2);
+    const size = (6 + Math.random() * 6).toFixed(1);
+    const color = colors[i % colors.length];
+    const rot = Math.round(Math.random() * 360);
+    pieces += `<span class="confetti-piece" style="left:${left}%; width:${size}px; height:${size*1.4}px; background-color:${color}; transform:rotate(${rot}deg); animation: wpk-fall ${dur}s ${delay}s ease-in forwards;"></span>`;
+  }
+  return `<div style="position:absolute; inset:0; overflow:hidden; pointer-events:none;">${pieces}</div>`;
+}
+
+/* ============================== GLOSSARY MODAL ============================== */
+function glossaryModalHtml() {
+  let rows = "";
+  GLOSSARY.forEach((g) => {
+    rows += `
+    <div class="pb-2" style="border-bottom:1px solid ${PARCHMENT_LINE};">
+      <div class="font-bold text-[14px] f-display" style="color:${GOLD_DARK};">${esc(g.term)}</div>
+      <div class="text-[13px] leading-snug f-body" style="color:${INK};">${esc(g.def)}</div>
+    </div>`;
+  });
+  return `
+  <div class="fade-in" style="position:absolute; inset:0; background:rgba(10,16,30,0.75); z-index:40;"
+    class="flex items-center justify-center p-4" onclick="app.closeGlossary()">
+    <div class="w-full max-w-md rounded-3xl p-5 overflow-y-auto shadow-2xl scrollbar-thin" style="background:${PARCHMENT}; border:3px solid ${GOLD_DARK}; max-height:80%; margin: 40px auto;" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-lg font-extrabold flex items-center gap-2 f-display" style="color:${INK};">
+          ${icon('book-open',20,`color:${GOLD_DARK}`)} Word Bank
+        </div>
+        <button onclick="app.closeGlossary()" class="p-1 rounded-full hover:bg-black/5">${icon('x',20,`color:${INK}`)}</button>
+      </div>
+      <div class="flex flex-col gap-3">${rows}</div>
+    </div>
+  </div>`;
+}
+
+/* ============================== CERTIFICATE MODAL ============================== */
+function certificateModalHtml() {
+  const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+  return `
+  <div class="fade-in" style="position:absolute; inset:0; background:rgba(10,16,30,0.8); z-index:40;"
+    onclick="app.closeCertificate()">
+    <div class="relative w-full max-w-md rounded-2xl p-8 text-center shadow-2xl overflow-hidden" style="background:${PARCHMENT}; border:6px double ${GOLD_DARK}; margin: 60px auto;" onclick="event.stopPropagation()">
+      ${confettiHtml()}
+      <button onclick="app.closeCertificate()" class="absolute top-3 right-3 p-1 rounded-full hover:bg-black/5">${icon('x',20,`color:${INK}`)}</button>
+      <div class="flex justify-center mb-2">${pipSvg('proud',64)}</div>
+      <div class="text-xs tracking-widest font-bold uppercase f-display" style="color:${GOLD_DARK};">Certificate of Mastery</div>
+      <div class="text-2xl font-extrabold mt-2 f-display" style="color:${INK};">Word Puzzle Kingdom</div>
+      <div class="text-sm mt-4 f-body" style="color:${INK};">This certifies that</div>
+      <div class="text-xl font-bold mt-1 border-b-2 border-dashed inline-block px-2 f-display" style="color:${INK};">Swarup</div>
+      <div class="text-sm mt-3 leading-relaxed f-body" style="color:${INK};">
+        has explored all three kingdoms and mastered<br />Nouns I, II &amp; III with ${TOTAL_MAX_STARS} out of ${TOTAL_MAX_STARS} stars!
+      </div>
+      <div class="text-xs mt-4 f-body" style="color:#8A7A4A;">${today}</div>
+    </div>
+  </div>`;
+}
+
+/* ============================== PUZZLE TILE ============================== */
+function puzzleTileHtml(chapter) {
+  const colors = CH_COLORS[chapter.id];
+  const prog = state.progress[chapter.id] || { best: 0, stars: 0 };
+  const stars = prog.stars || 0;
+  const mastered = stars >= 2;
+  let starsHtml = "";
+  for (let i = 0; i < 3; i++) {
+    const filled = i < stars;
+    starsHtml += icon('star', 16, `color:${filled ? GOLD : (mastered ? 'rgba(255,255,255,0.5)' : '#C9BB8E')}; fill:${filled ? GOLD : 'transparent'};`);
+  }
+  return `
+  <button onclick="app.enterChapter(${chapter.id})"
+    class="relative flex-1 min-w-[150px] rounded-2xl p-4 flex flex-col items-center gap-2 transition-transform duration-200 hover:-translate-y-1 active:translate-y-0"
+    style="background:${mastered ? `linear-gradient(155deg, ${colors.main}, ${colors.dark})` : PARCHMENT}; border:3px solid ${mastered ? colors.dark : PARCHMENT_LINE}; box-shadow: 0 4px 0 rgba(0,0,0,0.12);">
+    <div style="width:54px; height:54px; border-radius:16px; background:${mastered ? 'rgba(255,255,255,0.18)' : colors.soft}; display:flex; align-items:center; justify-content:center;">
+      ${icon('puzzle', 30, `color:${mastered ? CREAM_TEXT : colors.main}; stroke-width:2.3;`)}
+    </div>
+    <div class="text-center">
+      <div class="text-sm font-bold leading-tight f-display" style="color:${mastered ? CREAM_TEXT : INK};">${chapter.emoji} ${esc(chapter.title)}</div>
+      <div class="text-[11px] mt-0.5 f-body" style="color:${mastered ? 'rgba(255,255,255,0.85)' : '#6B5E3F'};">${esc(chapter.subtitle)}</div>
+      ${prog.best > 0 ? `<div class="text-[10px] mt-0.5 f-body" style="color:${mastered ? 'rgba(255,255,255,0.75)' : '#8A7A4A'};">Best score: ${prog.best}%</div>` : ""}
+    </div>
+    <div class="flex gap-1 mt-1">${starsHtml}</div>
+  </button>`;
+}
+
+/* ============================== HOME SCREEN ============================== */
+function renderHome() {
+  const totalStars = CHAPTERS.reduce((s, c) => s + ((state.progress[c.id] && state.progress[c.id].stars) || 0), 0);
+  const allMastered = totalStars === TOTAL_MAX_STARS;
+  const tiles = CHAPTERS.map(puzzleTileHtml).join("");
+  return `
+  <div class="w-full max-w-3xl mx-auto px-5 py-8 fade-in">
+    <div class="flex justify-end mb-2">
+      <button onclick="app.openGlossary()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-white/15 transition f-body"
+        style="color:${CREAM_TEXT}; background:rgba(255,255,255,0.08);">
+        ${icon('book-open',14)} Word Bank
+      </button>
+    </div>
+
+    <div class="flex flex-col items-center text-center gap-2 mb-6">
+      ${pipSvg(allMastered ? 'proud' : 'happy', 74)}
+      <h1 class="text-3xl font-extrabold mt-2 f-display" style="color:${CREAM_TEXT};">Word Puzzle Kingdom</h1>
+      ${speechBubble('idle', allMastered
+        ? "Welcome back, Champion Swarup! You've mastered every kingdom!"
+        : "Welcome back, Swarup! Pick a kingdom below and let's piece together some grammar.", "center")}
+
+      <div class="flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold mt-3 f-display"
+        style="background:rgba(242,183,5,0.15); border:1.5px solid ${GOLD}66; color:${GOLD};">
+        ${icon('star',16,`color:${GOLD}; fill:${GOLD};`)} ${totalStars} / ${TOTAL_MAX_STARS} stars collected
+      </div>
+
+      ${allMastered ? `
+      <button onclick="app.openCertificate()" class="flex items-center gap-2 mt-3 px-4 py-2 rounded-full text-sm font-bold shadow-md hover:brightness-105 transition f-display"
+        style="background:${GOLD}; color:${INK};">
+        ${icon('award',16)} View Your Certificate
+      </button>` : ""}
+    </div>
+
+    <div class="flex flex-wrap gap-4 justify-center">${tiles}</div>
+
+    <p class="text-center text-xs mt-8 f-body" style="color:#8493B5;">
+      Tap a kingdom to learn the rule, try a quick check, then play the challenge to win stars ⭐
+    </p>
+  </div>`;
+}
+
+/* ============================== LEARN TAB ============================== */
+function renderLearnTab(chapter) {
+  const colors = CH_COLORS[chapter.id];
+  const idx = state.learnIdx;
+  const card = chapter.learn[idx];
+  const isFirst = idx === 0;
+  const isLast = idx === chapter.learn.length - 1;
+  const checkSel = state.checkSel;
+
+  let examplesHtml = "";
+  if (card.examples) {
+    examplesHtml = `
+    <div class="mb-2">
+      <div class="text-[11px] font-bold uppercase tracking-wide mb-1 f-body" style="color:${colors.dark};">Examples</div>
+      <div>${card.examples.map((ex) => chip(ex, colors.main)).join("")}</div>
+    </div>`;
+  }
+
+  let checkHtml = "";
+  if (card.check) {
+    const optsHtml = card.check.opts.map((opt, i) => {
+      let bg = "#FFFFFF", border = PARCHMENT_LINE, iconHtml = "";
+      if (checkSel !== null) {
+        if (i === card.check.a) { bg = "#DFF5E1"; border = RIGHT; iconHtml = icon('circle-check-big',16,`color:${RIGHT}`); }
+        else if (i === checkSel) { bg = "#FBE1DE"; border = WRONG; iconHtml = icon('circle-x',16,`color:${WRONG}`); }
+      }
+      const disabledAttr = checkSel !== null ? "disabled" : "";
+      return `
+      <button ${disabledAttr} onclick="app.pickCheck(${i})" class="opt-btn flex items-center justify-between text-left px-3 py-1.5 rounded-lg text-[13px] font-semibold f-body"
+        style="background:${bg}; border:2px solid ${border}; color:${INK};">
+        <span>${esc(opt)}</span>${iconHtml}
+      </button>`;
+    }).join("");
+
+    const feedback = checkSel !== null ? `
+      <div class="text-[12px] mt-2 flex items-start gap-1.5 f-body" style="color:${colors.dark};">
+        ${icon('sparkles',14,'margin-top:2px;flex-shrink:0;')}
+        <span>${checkSel === card.check.a ? "Yes! " : "Not quite — "}${esc(card.check.note)}</span>
+      </div>` : "";
+
+    checkHtml = `
+    <div class="p-3 mt-3" style="background:${colors.soft}; border-radius:16px;">
+      <div class="text-[13px] font-bold mb-2 flex items-center gap-1.5 f-display" style="color:${colors.dark};">
+        ${icon('lightbulb',15)} Quick Check
+      </div>
+      <div class="text-[13px] mb-2 f-body" style="color:${INK};">${esc(card.check.q)}</div>
+      <div class="flex flex-col gap-1.5">${optsHtml}</div>
+      ${feedback}
+    </div>`;
+  }
+
+  let dots = "";
+  chapter.learn.forEach((_, i) => {
+    dots += `<span style="width:${i === idx ? 18 : 8}px; height:8px; border-radius:4px; background:${i === idx ? colors.main : '#4A5A7A'}; transition: all .2s; display:inline-block;"></span>`;
+  });
+
+  return `
+  <div class="flex flex-col items-center px-4 py-6 fade-in">
+    <div class="mb-3 w-full max-w-md">
+      ${speechBubble('thinking', "Read the rule below, then try the quick check to see if it clicked!")}
+    </div>
+
+    <div class="w-full max-w-md rounded-3xl p-6 shadow-lg" style="background:${PARCHMENT}; border:3px solid ${colors.main};">
+      <div class="text-xl font-bold mb-3 f-display" style="color:${colors.dark};">${esc(card.h)}</div>
+      <div class="text-[15px] leading-relaxed mb-3 f-body" style="color:${INK};">${esc(card.b)}</div>
+      ${examplesHtml}
+      ${checkHtml}
+    </div>
+
+    <div class="flex items-center gap-4 mt-5">
+      <button ${isFirst ? "disabled" : ""} onclick="app.learnGoTo(${Math.max(0, idx - 1)})" style="opacity:${isFirst ? 0.3 : 1};" class="p-2 rounded-full bg-white/10 hover:bg-white/20 transition">
+        ${icon('chevron-left',22,`color:${CREAM_TEXT}`)}
+      </button>
+      <div class="flex gap-1.5">${dots}</div>
+      <button onclick="app.learnGoTo(${isLast ? 0 : idx + 1})" class="p-2 rounded-full bg-white/10 hover:bg-white/20 transition">
+        ${icon('chevron-right',22,`color:${CREAM_TEXT}`)}
+      </button>
+    </div>
+    <div class="text-xs mt-3 f-body" style="color:#8493B5;">Card ${idx + 1} of ${chapter.learn.length}</div>
+  </div>`;
+}
+
+/* ============================== PRACTICE TAB ============================== */
+function renderPracticeTab(chapter) {
+  const colors = CH_COLORS[chapter.id];
+  const questions = chapter.quiz;
+  const qz = state.quiz;
+
+  if (qz.done) {
+    const pct = Math.round((qz.score / questions.length) * 100);
+    const stars = starsForScore(pct);
+    let starsHtml = "";
+    for (let i = 0; i < 3; i++) {
+      const filled = i < stars;
+      starsHtml += icon('star', 30, `color:${filled ? GOLD : '#4A5A7A'}; fill:${filled ? GOLD : 'transparent'};`);
+    }
+    let mistakesHtml = "";
+    if (qz.mistakes.length > 0) {
+      const rows = qz.mistakes.map((m, i) => `
+        <div class="pb-2" style="border-bottom:${i < qz.mistakes.length - 1 ? `1px solid ${PARCHMENT_LINE}` : "none"};">
+          <div class="text-[13px] font-semibold mb-1 f-body" style="color:${INK};">${esc(m.q)}</div>
+          <div class="text-[12px] f-body" style="color:${WRONG};">Your answer: ${esc(m.your)}</div>
+          <div class="text-[12px] f-body" style="color:${RIGHT};">Correct answer: ${esc(m.correct)}</div>
+          <div class="text-[12px] italic mt-0.5 f-body" style="color:#6B5E3F;">${esc(m.ex)}</div>
+        </div>`).join("");
+      mistakesHtml = `
+      <div class="w-full max-w-md rounded-2xl p-4 mt-6 text-left" style="background:${PARCHMENT}; border:2px solid ${colors.main};">
+        <div class="text-sm font-bold mb-2 flex items-center gap-1.5 f-display" style="color:${colors.dark};">
+          ${icon('lightbulb',16)} Let's Review Together
+        </div>
+        <div class="flex flex-col gap-3">${rows}</div>
+      </div>`;
+    }
+    const title = pct >= 90 ? "Puzzle Master!" : pct >= 70 ? "Great Job!" : pct >= 40 ? "Good Try!" : "Keep Practising!";
+    return `
+    <div class="relative flex flex-col items-center px-6 py-10 overflow-hidden fade-in">
+      ${stars >= 2 ? confettiHtml() : ""}
+      ${pipSvg(stars >= 2 ? 'proud' : stars === 1 ? 'happy' : 'oops', 80)}
+      <h2 class="text-2xl font-extrabold mt-3 f-display" style="color:${CREAM_TEXT};">${title}</h2>
+      <p class="text-sm mt-1 f-body" style="color:#C9D3E8;">You scored ${qz.score} out of ${questions.length} (${pct}%)</p>
+      <div class="flex gap-2 mt-3">${starsHtml}</div>
+      ${mistakesHtml}
+      <button onclick="app.retryQuiz()" class="flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full font-bold shadow-md hover:brightness-110 transition f-display"
+        style="background:${colors.main}; color:${CREAM_TEXT};">
+        ${icon('rotate-ccw',18)} Play Again
+      </button>
+    </div>`;
+  }
+
+  const q = questions[qz.qIdx];
+  const hintHtml = qz.showHint && !qz.answered ? `
+    <div class="rounded-xl px-3 py-2 text-[12.5px] mb-3 flex items-start gap-1.5 f-body" style="background:${colors.soft}; color:${colors.dark};">
+      ${icon('sparkles',14,'margin-top:2px;flex-shrink:0;')} <span>${esc(q.hint)}</span>
+    </div>` : "";
+
+  const optsHtml = q.opts.map((opt, i) => {
+    let bg = "#FFFFFF", border = PARCHMENT_LINE, iconHtml = "";
+    if (qz.answered) {
+      if (i === q.a) { bg = "#DFF5E1"; border = RIGHT; iconHtml = icon('circle-check-big',20,`color:${RIGHT}`); }
+      else if (i === qz.selected) { bg = "#FBE1DE"; border = WRONG; iconHtml = icon('circle-x',20,`color:${WRONG}`); }
+    }
+    const disabledAttr = qz.answered ? "disabled" : "";
+    return `
+    <button ${disabledAttr} onclick="app.pickQuiz(${i})" class="opt-btn flex items-center justify-between text-left px-4 py-2.5 rounded-xl font-semibold text-[14px] f-body"
+      style="background:${bg}; border:2px solid ${border}; color:${INK};">
+      <span>${esc(opt)}</span>${iconHtml}
+    </button>`;
+  }).join("");
+
+  const feedback = qz.answered ? `
+    <div class="mt-4 rounded-xl px-3 py-2 text-[13px] flex items-start gap-2 f-body" style="background:${colors.soft}; color:${colors.dark};">
+      ${icon('sparkles',16,'margin-top:2px;flex-shrink:0;')}
+      <span><b>${qz.selected === q.a ? "Correct! " : "Almost — "}</b>${esc(q.ex)}</span>
+    </div>` : "";
+
+  const nextBtn = qz.answered ? `
+    <button onclick="app.nextQuiz()" class="flex items-center gap-1.5 mt-5 px-6 py-2.5 rounded-full font-bold shadow-md hover:brightness-110 transition f-display"
+      style="background:${colors.main}; color:${CREAM_TEXT};">
+      ${qz.qIdx === questions.length - 1 ? "See Results" : "Next Question"} ${icon('chevron-right',18)}
+    </button>` : "";
+
+  const streakHtml = qz.streak >= 2 ? `
+    <span class="flex items-center gap-0.5" style="color:#FF9F43;">
+      ${icon('flame',16,'color:#FF9F43; fill:#FF9F43;')} <span class="text-xs font-bold">${qz.streak}</span>
+    </span>` : "";
+
+  const hintBtn = !qz.answered ? `
+    <button onclick="app.toggleHint()" class="flex-shrink-0 p-1.5 rounded-full" style="background:${colors.soft}; color:${colors.dark};" title="Get a hint">
+      ${icon('lightbulb',16)}
+    </button>` : "";
+
+  return `
+  <div class="flex flex-col items-center px-4 py-6 fade-in">
+    <div class="w-full max-w-md flex items-center gap-3 mb-4">
+      <div class="flex-1 h-2.5 rounded-full overflow-hidden" style="background:#33456B;">
+        <div style="width:${(qz.qIdx / questions.length) * 100}%; background:${colors.main}; transition: width .3s;" class="h-full rounded-full"></div>
+      </div>
+      <span class="text-xs font-bold whitespace-nowrap f-body" style="color:#C9D3E8;">${qz.qIdx + 1} / ${questions.length}</span>
+      ${streakHtml}
+    </div>
+
+    <div class="w-full max-w-md rounded-3xl p-5 shadow-lg" style="background:${PARCHMENT}; border:3px solid ${colors.main};">
+      <div class="flex items-start justify-between gap-2 mb-4">
+        <div class="text-lg font-bold leading-snug f-display" style="color:${INK};">${esc(q.q)}</div>
+        ${hintBtn}
+      </div>
+      ${hintHtml}
+      <div class="flex flex-col gap-2.5">${optsHtml}</div>
+      ${feedback}
+    </div>
+    ${nextBtn}
+  </div>`;
+}
+
+/* ============================== CHAPTER SCREEN ============================== */
+function renderChapter() {
+  const chapter = CHAPTERS.find((c) => c.id === state.activeChapterId);
+  const colors = CH_COLORS[chapter.id];
+  return `
+  <div class="w-full max-w-3xl mx-auto px-3 py-5 fade-in">
+    <div class="flex items-center justify-between gap-3 mb-4 px-2">
+      <div class="flex items-center gap-3">
+        <button onclick="app.backHome()" class="p-2 rounded-full bg-white/10 hover:bg-white/20 transition">
+          ${icon('arrow-left',20,`color:${CREAM_TEXT}`)}
+        </button>
+        <div>
+          <div class="text-lg font-bold leading-none f-display" style="color:${CREAM_TEXT};">${chapter.emoji} ${esc(chapter.title)}</div>
+          <div class="text-xs mt-1 f-body" style="color:#9DAFD1;">${esc(chapter.subtitle)}</div>
+        </div>
+      </div>
+      <button onclick="app.openGlossary()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-white/15 transition flex-shrink-0 f-body"
+        style="color:${CREAM_TEXT}; background:rgba(255,255,255,0.08);">
+        ${icon('book-open',14)} Words
+      </button>
+    </div>
+
+    <div class="flex justify-center gap-2 mb-2">
+      <button onclick="app.setTab('learn')" class="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition f-display"
+        style="background:${state.tab === 'learn' ? colors.main : 'rgba(255,255,255,0.08)'}; color:${CREAM_TEXT};">
+        ${icon('book-open',16)} Learn
+      </button>
+      <button onclick="app.setTab('practice')" class="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition f-display"
+        style="background:${state.tab === 'practice' ? colors.main : 'rgba(255,255,255,0.08)'}; color:${CREAM_TEXT};">
+        ${icon('pen-line',16)} Practice
+      </button>
+    </div>
+
+    <div id="tab-content">${state.tab === "learn" ? renderLearnTab(chapter) : renderPracticeTab(chapter)}</div>
+  </div>`;
+}
+
+/* ============================== MASTER RENDER ============================== */
+function render() {
+  let html = state.screen === "home" ? renderHome() : renderChapter();
+  if (state.showGlossary) html += glossaryModalHtml();
+  if (state.showCertificate) html += certificateModalHtml();
+  document.getElementById("root").innerHTML = html;
+  if (window.lucide) lucide.createIcons();
+}
+
+/* ============================== APP CONTROLLER ============================== */
+const app = {
+  enterChapter(id) {
+    state.activeChapterId = id;
+    state.screen = "chapter";
+    state.tab = "learn";
+    state.learnIdx = 0;
+    state.checkSel = null;
+    resetQuizState();
+    render();
+  },
+  backHome() {
+    state.screen = "home";
+    state.activeChapterId = null;
+    render();
+  },
+  openGlossary() { state.showGlossary = true; render(); },
+  closeGlossary() { state.showGlossary = false; render(); },
+  openCertificate() { state.showCertificate = true; render(); },
+  closeCertificate() { state.showCertificate = false; render(); },
+
+  setTab(tab) {
+    state.tab = tab;
+    if (tab === "learn") { state.learnIdx = 0; state.checkSel = null; }
+    else { resetQuizState(); }
+    render();
+  },
+
+  learnGoTo(newIdx) {
+    state.learnIdx = newIdx;
+    state.checkSel = null;
+    render();
+  },
+  pickCheck(i) {
+    if (state.checkSel !== null) return;
+    state.checkSel = i;
+    render();
+  },
+
+  pickQuiz(i) {
+    const chapter = CHAPTERS.find((c) => c.id === state.activeChapterId);
+    const q = chapter.quiz[state.quiz.qIdx];
+    if (state.quiz.answered) return;
+    state.quiz.selected = i;
+    state.quiz.answered = true;
+    if (i === q.a) {
+      state.quiz.score += 1;
+      state.quiz.streak += 1;
+    } else {
+      state.quiz.streak = 0;
+      state.quiz.mistakes.push({ q: q.q, your: q.opts[i], correct: q.opts[q.a], ex: q.ex });
+    }
+    render();
+  },
+  toggleHint() { state.quiz.showHint = !state.quiz.showHint; render(); },
+
+  nextQuiz() {
+    const chapter = CHAPTERS.find((c) => c.id === state.activeChapterId);
+    const questions = chapter.quiz;
+    const qz = state.quiz;
+    if (qz.qIdx === questions.length - 1) {
+      const pct = Math.round((qz.score / questions.length) * 100);
+      qz.done = true;
+      app.finishQuiz(chapter.id, pct);
+    } else {
+      qz.qIdx += 1;
+      qz.selected = null;
+      qz.answered = false;
+      qz.showHint = false;
+    }
+    render();
+  },
+  retryQuiz() {
+    resetQuizState();
+    render();
+  },
+  finishQuiz(chapterId, pct) {
+    const prev = state.progress[chapterId] || { best: 0, stars: 0 };
+    const newBest = Math.max(prev.best || 0, pct);
+    const newStars = Math.max(prev.stars || 0, starsForScore(pct));
+    state.progress[chapterId] = { best: newBest, stars: newStars };
+    saveProgress(state.progress);
+  },
+};
+
+render();
+</script>
+</body>
+</html>
